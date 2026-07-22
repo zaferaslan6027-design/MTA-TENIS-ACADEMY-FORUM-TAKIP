@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<!--
+  © 2026 Megasaray Hotels & MTA Tennis Academy. All rights reserved.
+  Tum telif haklari Megasaray Hotels ve MTA Tennis Academy'ye aittir.
+  Bu yazilim izinsiz kopyalanamaz, dagitilamaz veya ucuncu taraflarla paylasilamaz.
+-->
+
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MTA Akademi - Yönetim Paneli</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#101114; --bg2:#0b0c0e; --card:#1b1d23; --card2:#22252c; --border:#2b2e36;
+  --text:#ececed; --dim:#9a9da6; --dim2:#6c6f78;
+  --accent:#ff9d2f; --accent2:#ff6a1f; --accent-grad:linear-gradient(135deg,#ffb54d,#ff7a1f);
+  --green:#3ecf8e; --green-bg:rgba(62,207,142,.12);
+  --red:#ff5c5c; --red-bg:rgba(255,92,92,.12);
+  --blue:#4da3ff; --blue-bg:rgba(77,163,255,.12);
+  --radius:14px;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
+input,select,textarea,button{font-family:inherit;}
+::placeholder{color:var(--dim2);}
+a{color:var(--accent);}
+
+/* ---------- Login ---------- */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 20%,#1a1c22,#0b0c0e);}
+.loginBox{width:340px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;}
+.logo{font-size:34px;font-weight:900;letter-spacing:1px;background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.logo small{display:block;font-size:9px;letter-spacing:3px;color:var(--dim);font-weight:600;margin-top:2px;}
+.field{margin-top:16px;text-align:left;}
+.field label{font-size:12px;color:var(--dim);display:block;margin-bottom:6px;}
+.field input,.field select,.field textarea{width:100%;padding:11px 12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);}
+.btn{border:none;border-radius:10px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center;}
+.btn-primary{background:var(--accent-grad);color:#1a1200;width:100%;margin-top:18px;}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border);}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid rgba(255,92,92,.3);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.err{color:var(--red);font-size:13px;margin-top:10px;min-height:16px;}
+.loginFooter{margin-top:18px;font-size:12px;color:var(--dim2);}
+
+/* ---------- App shell ---------- */
+#app{display:none;min-height:100vh;}
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 26px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:50;}
+.topLeft{display:flex;align-items:center;gap:14px;cursor:pointer;}
+.topLeft .logo{font-size:20px;}
+.userChip{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--dim);}
+.roleTag{background:var(--accent-grad);color:#1a1200;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+main{max-width:1180px;margin:0 auto;padding:26px;}
+.view{display:none;}
+.view.active{display:block;}
+.pageHead{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+h1.pageTitle{color:var(--accent);font-size:26px;margin:0;}
+.backBtn{display:flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;flex:none;}
+.backBtn:hover{border-color:var(--accent);color:var(--accent);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.grid2{grid-template-columns:1fr;}}
+
+/* ---------- Dashboard ---------- */
+.dashHero{text-align:center;padding:30px 0 10px;}
+.dashHero .logo{font-size:46px;}
+.dashDate{color:var(--dim);font-size:14px;margin-top:10px;}
+.dashClock{font-size:56px;font-weight:800;color:var(--accent);margin-top:6px;letter-spacing:1px;}
+.dashClock span.sec{font-size:30px;color:var(--dim);}
+.tileGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:34px;}
+@media(max-width:900px){.tileGrid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:560px){.tileGrid{grid-template-columns:repeat(2,1fr);}}
+.tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 10px;text-align:center;cursor:pointer;transition:.15s;}
+.tile:hover{border-color:var(--accent);transform:translateY(-2px);}
+.tile .ic{font-size:26px;margin-bottom:10px;}
+.tile .lb{font-size:13px;font-weight:600;}
+.tileSend{max-width:220px;margin:20px auto 0;background:var(--accent-grad);color:#1a1200;}
+.tileSend .lb{color:#1a1200;}
+
+/* ---------- Forms ---------- */
+.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;}
+@media(max-width:700px){.formGrid{grid-template-columns:1fr;}}
+.formGrid .full{grid-column:1/-1;}
+.field2 label{font-size:12.5px;color:var(--dim);display:block;margin-bottom:6px;font-weight:600;}
+.field2 input,.field2 select,.field2 textarea{width:100%;padding:11px 12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;}
+.field2 textarea{min-height:70px;resize:vertical;}
+.toggleRow{display:flex;align-items:center;gap:10px;margin-top:6px;}
+.switch{width:40px;height:22px;border-radius:20px;background:var(--card2);border:1px solid var(--border);position:relative;cursor:pointer;flex:none;}
+.switch.on{background:var(--accent-grad);border-color:transparent;}
+.switch .dot{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s;}
+.switch.on .dot{left:20px;}
+.formActions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;}
+
+/* ---------- Records ---------- */
+.recordsBar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.recordsBar input,.recordsBar select{padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);}
+.recordsBar input{flex:1;min-width:180px;}
+.recRow{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:10px;flex-wrap:wrap;gap:10px;}
+.recInfo .name{font-weight:700;font-size:15px;}
+.recInfo .sub{font-size:12px;color:var(--dim);margin-top:3px;}
+.recPrice{text-align:right;font-size:13px;}
+.recPrice .eur{color:var(--red);font-weight:700;}
+.recPrice .try{color:var(--dim);}
+.statusBadge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-left:8px;}
+.st-active{background:var(--green-bg);color:var(--green);}
+.st-completed{background:var(--blue-bg);color:var(--blue);}
+.st-inactive{background:var(--red-bg);color:var(--red);}
+.st-done{background:var(--green-bg);color:var(--green);}
+.st-notdone{background:var(--red-bg);color:var(--red);}
+.st-pending{background:rgba(255,157,47,.16);color:var(--accent);}
+.st-cancelled{background:rgba(150,150,150,.18);color:#a5a5a5;}
+.recActions{display:flex;gap:8px;}
+.iconBtn{width:32px;height:32px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.iconBtn:hover{border-color:var(--accent);}
+
+/* ---------- Coaches ---------- */
+.coachRow{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:10px;}
+.coachRow .name{font-weight:700;}
+.coachRow .phone{font-size:12px;color:var(--dim);}
+
+/* ---------- Rates ---------- */
+.rateHead{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+@media(max-width:700px){.rateHead{grid-template-columns:repeat(2,1fr);}}
+.rateHeadCard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;}
+.rateHeadCard .pair{font-size:12px;color:var(--dim);}
+.rateHeadCard .val{font-size:20px;font-weight:800;color:var(--accent);margin-top:4px;}
+table.rateTable{width:100%;border-collapse:collapse;font-size:13px;}
+table.rateTable th{text-align:left;color:var(--dim);font-weight:600;padding:8px;border-bottom:1px solid var(--border);}
+table.rateTable td{padding:8px;border-bottom:1px solid var(--border);}
+
+/* ---------- Settings tabs ---------- */
+.settingsTabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.stab{padding:9px 14px;border-radius:10px;background:var(--card2);border:1px solid var(--border);font-size:13px;cursor:pointer;}
+.stab.active{background:var(--accent-grad);color:#1a1200;font-weight:700;border-color:transparent;}
+.settingsPane{display:none;}
+.settingsPane.active{display:block;}
+.linkBox{display:flex;gap:8px;align-items:center;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;word-break:break-all;}
+.swatchRow{display:flex;align-items:center;gap:10px;}
+.swatch{width:38px;height:38px;border-radius:8px;border:1px solid var(--border);padding:0;background:none;cursor:pointer;}
+.themeGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.themeOpt{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;font-size:13px;}
+.themeOpt.active{border-color:var(--accent);}
+.dots{display:flex;}
+.dots i{width:14px;height:14px;border-radius:50%;margin-left:-4px;border:2px solid var(--card2);}
+.staffRow{display:flex;align-items:center;justify-content:space-between;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:8px;}
+.staffAvatar{width:34px;height:34px;border-radius:50%;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;font-weight:800;color:#1a1200;}
+.staffMeta{display:flex;align-items:center;gap:12px;}
+
+/* ---------- Reports ---------- */
+.chipRow{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;}
+.chip{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--dim);}
+.chip input{accent-color:var(--accent);}
+
+/* ---------- Misc ---------- */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--accent);border-radius:10px;padding:12px 18px;font-size:13px;z-index:200;display:none;box-shadow:0 8px 30px rgba(0,0,0,.4);}
+.modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modalOverlay.open{display:flex;}
+.modalBox{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px;max-width:720px;width:100%;max-height:88vh;overflow:auto;}
+.modalBox h2{color:var(--accent);margin-top:0;font-size:19px;}
+.emptyState{text-align:center;color:var(--dim);padding:40px 0;}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--dim2);border-top-color:var(--accent);border-radius:50%;animation:sp 0.7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+@media print{
+  body *{visibility:hidden;}
+  #printArea,#printArea *{visibility:visible;}
+  #printArea{position:absolute;left:0;top:0;width:100%;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="loginScreen">
+  <div class="loginBox">
+    <div class="logo">MTA<small>AKADEMİ • YÖNETİM</small></div>
+    <div class="field"><label>E-Posta</label><input id="loginEmail" type="email" placeholder="ornek@mail.com"></div>
+    <div class="field"><label>Şifre</label><input id="loginPass" type="password" placeholder="••••••••"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Giriş Yap</button>
+    <div class="err" id="loginErr"></div>
+    <div class="loginFooter">Yeni personel misiniz? Size gönderilen davet linkinden hesap oluşturun.</div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <div id="topbar">
+    <div class="topLeft" onclick="showView('dashboard')">
+      <div class="logo" style="font-size:20px;">MTA</div>
+      <strong id="academyNameTop">MTA Akademi</strong>
+    </div>
+    <div class="userChip">
+      <span id="userNameChip">-</span>
+      <span class="roleTag" id="userRoleChip">-</span>
+      <button class="btn btn-secondary" style="padding:7px 12px;" onclick="doLogout()">Çıkış</button>
+    </div>
+  </div>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="dashHero">
+        <div class="logo">MTA</div>
+        <div class="dashDate" id="dashDate">-</div>
+        <div class="dashClock" id="dashClock">--:--<span class="sec">:--</span></div>
+      </div>
+      <div class="tileGrid">
+        <div class="tile" onclick="showView('newform')"><div class="ic">➕</div><div class="lb">Yeni Form</div></div>
+        <div class="tile" onclick="showView('records')"><div class="ic">📋</div><div class="lb">Kayıtlar</div></div>
+        <div class="tile" onclick="showView('reports')"><div class="ic">📊</div><div class="lb">Raporlar</div></div>
+        <div class="tile" onclick="showView('coaches')"><div class="ic">🧑‍🏫</div><div class="lb">Antrenörler</div></div>
+        <div class="tile" onclick="showView('settings')"><div class="ic">⚙️</div><div class="lb">Ayarlar</div></div>
+      </div>
+      <div style="display:flex;justify-content:center;">
+        <div class="tile tileSend" onclick="showView('settings');switchSettingsTab('link')"><div class="ic">📤</div><div class="lb">Form Gönder</div></div>
+      </div>
+    </section>
+
+    <!-- YENİ FORM -->
+    <section class="view" id="view-newform">
+      <div class="pageHead"><button class="backBtn" onclick="showView('dashboard')">← Ana Menü</button><h1 class="pageTitle">Yeni Oyuncu Kayıt Formu</h1></div>
+      <div class="card">
+        <div class="formGrid">
+          <div class="field2"><label>Ad Soyad *</label><input id="f_fullName" placeholder="Full Name"></div>
+          <div class="field2"><label>Yaş</label><input id="f_age" type="number"></div>
+          <div class="field2"><label>Uyruk</label><input id="f_nationality"></div>
+          <div class="field2"><label>T.C. Kimlik No</label><input id="f_tcNo"></div>
+          <div class="field2 full"><label>E-Posta</label><input id="f_email" type="email"></div>
+          <div class="field2"><label>Ülke Kodu</label>
+            <select id="f_countryCode"><option>+90</option><option>+49</option><option>+7</option><option>+44</option><option>+1</option><option>+971</option></select>
+          </div>
+          <div class="field2"><label>Telefon</label><input id="f_phone"></div>
+          <div class="field2"><label>Tarih</label><input id="f_date" type="date"></div>
+          <div class="field2"><label>Oda No</label><input id="f_roomNo"></div>
+          <div class="field2"><label>Antrenör <span style="color:var(--dim2);font-weight:400;">(opsiyonel)</span></label>
+            <select id="f_coachId"><option value="">Seçiniz (opsiyonel)</option></select>
+          </div>
+          <div class="field2"><label>Paket Türü</label>
+            <select id="f_packageType">
+              <option value="">Seçiniz</option>
+              <option>Junior Pro Performance</option>
+              <option>Private Lessons</option>
+              <option>Group Lessons</option>
+              <option>Members</option>
+              <option>Balls</option>
+              <option>Courts</option>
+            </select>
+          </div>
+          <div class="field2"><label>Ödeme Yöntemi</label>
+            <select id="f_paymentMethod"><option value="">Seçiniz</option><option>Nakit</option><option>Kredi Kartı</option><option>Havale/EFT</option><option>Taksitli</option></select>
+          </div>
+          <div class="field2 full"><label>Paket Süresi</label><input id="f_packageDuration" placeholder="örn. 5 gün / 10 saat"></div>
+          <div class="field2"><label>Fiyat (EUR) €</label><input id="f_priceEUR" type="number" step="0.01"></div>
+          <div class="field2"><label>Fiyat (TRY) ₺</label><input id="f_priceTRY" type="number" step="0.01"></div>
+          <div class="field2 full"><label>Not</label><textarea id="f_note"></textarea></div>
+          <div class="field2 full"><label>Taksit Bilgisi</label><textarea id="f_installmentInfo"></textarea></div>
+          <div class="field2 full">
+            <div class="toggleRow">
+              <div class="switch" id="f_pmSwitch" onclick="toggleSwitch(this)"><div class="dot"></div></div>
+              <label style="margin:0;">P.M. (Öğleden Sonra)</label>
+            </div>
+          </div>
+        </div>
+        <div class="formActions">
+          <button class="btn btn-primary" onclick="savePlayer()">💾 Kaydet</button>
+          <button class="btn btn-secondary" onclick="savePlayer(true,false)">🖨️ Kaydet &amp; Yazdır</button>
+          <button class="btn btn-secondary" onclick="savePlayer(false,true)">💬 Kaydet &amp; WhatsApp</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- KAYITLAR -->
+    <section class="view" id="view-records">
+      <div class="pageHead"><button class="backBtn" onclick="showView('dashboard')">← Ana Menü</button><h1 class="pageTitle">Kayıtlar</h1></div>
+      <div class="recordsBar">
+        <input id="recSearch" placeholder="🔍 İsim ile ara..." oninput="renderRecords()">
+        <select id="recStatusFilter" onchange="renderRecords()">
+          <option value="">Durum (Tümü)</option>
+          <option value="done">Yapıldı</option>
+          <option value="notdone">Yapılmadı</option>
+          <option value="pending">Beklemede</option>
+          <option value="cancelled">İptal Oldu</option>
+        </select>
+        <select id="recSortFilter" onchange="renderRecords()">
+          <option value="date_desc">En Yeni</option>
+          <option value="date_asc">En Eski</option>
+          <option value="name_asc">İsim A-Z</option>
+        </select>
+      </div>
+      <div id="recordsList"></div>
+    </section>
+
+    <!-- ANTRENÖRLER -->
+    <section class="view" id="view-coaches">
+      <div class="pageHead"><button class="backBtn" onclick="showView('dashboard')">← Ana Menü</button><h1 class="pageTitle">Antrenörler</h1></div>
+      <div class="card">
+        <div class="formGrid">
+          <div class="field2"><label>Antrenör Adı</label><input id="c_name" placeholder="Ad Soyad"></div>
+          <div class="field2"><label>Telefon</label><input id="c_phone" placeholder="+90 5xx xxx xx xx"></div>
+        </div>
+        <div class="formActions"><button class="btn btn-primary" onclick="saveCoach()">➕ Antrenör Ekle</button></div>
+      </div>
+      <div id="coachesList"></div>
+    </section>
+
+    <!-- RAPORLAR -->
+    <section class="view" id="view-reports">
+      <div class="pageHead"><button class="backBtn" onclick="showView('dashboard')">← Ana Menü</button><h1 class="pageTitle">Raporlar</h1></div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:10px;">Paket Türleri <a href="#" style="font-size:12px;margin-left:8px;" onclick="event.preventDefault();toggleAllPkg()">Tümünü Seç</a></div>
+        <div class="chipRow" id="pkgChips">
+          <label class="chip"><input type="checkbox" value="Junior Pro Performance">Junior Pro Performance</label>
+          <label class="chip"><input type="checkbox" value="Private Lessons">Private Lessons</label>
+          <label class="chip"><input type="checkbox" value="Group Lessons">Group Lessons</label>
+          <label class="chip"><input type="checkbox" value="Members">Members</label>
+          <label class="chip"><input type="checkbox" value="Balls">Balls</label>
+          <label class="chip"><input type="checkbox" value="Courts">Courts</label>
+        </div>
+        <div class="formGrid">
+          <div class="field2"><label>Başlangıç Tarihi</label><input type="date" id="rep_start"></div>
+          <div class="field2"><label>Bitiş Tarihi</label><input type="date" id="rep_end"></div>
+          <div class="field2"><label>İsim Ara</label><input id="rep_name"></div>
+          <div class="field2"><label>Durum</label>
+            <select id="rep_status"><option value="">Tümü</option><option value="done">Yapıldı</option><option value="notdone">Yapılmadı</option><option value="pending">Beklemede</option><option value="cancelled">İptal Oldu</option></select>
+          </div>
+        </div>
+        <div class="formActions"><button class="btn btn-primary" onclick="runReport()">🔍 Rapor Oluştur</button></div>
+      </div>
+      <div class="card" id="reportResultCard" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <strong id="reportCount">0 kayıt</strong>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-secondary" onclick="exportExcel()">📗 Excel</button>
+            <button class="btn btn-secondary" onclick="exportWord()">📘 Word</button>
+            <button class="btn btn-secondary" onclick="exportPDF()">📕 PDF / A4 Yazdır</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="rateTable" id="reportTable" style="min-width:800px;">
+            <thead><tr><th>Ad Soyad</th><th>Tarih</th><th>Paket</th><th>Antrenör</th><th>EUR</th><th>TRY</th><th>Günün EUR Alış Kuru</th><th>TRY → EUR (o günkü kur)</th><th>Durum</th></tr></thead>
+            <tbody id="reportTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- DÖVİZ -->
+    <section class="view" id="view-rates">
+      <div class="pageHead"><button class="backBtn" onclick="showView('dashboard')">← Ana Menü</button><h1 class="pageTitle">Döviz Kurları</h1></div>
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;color:var(--dim);">TCMB Merkez Bankası — <span id="rateDate">-</span></div>
+        <button class="btn btn-secondary" onclick="fetchRates(true)">🔄 Güncelle</button>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:12px;">📅 Geçmiş Kur Sorgulama</div>
+        <div style="font-size:12px;color:var(--dim);margin-bottom:14px;">Belirli bir günün, bu haftanın veya bu ayın TCMB kurlarını görüntüleyin. Sorgulanan her gün otomatik olarak kaydedilir, bir sonraki sorguda anında gelir.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
+          <div class="field2" style="max-width:200px;"><label>Tarih</label><input type="date" id="hist_date"></div>
+          <button class="btn btn-secondary" onclick="queryDateRate()">🔍 Günü Getir</button>
+          <button class="btn btn-secondary" onclick="queryRangeRates(7)">📆 Bu Hafta (7 gün)</button>
+          <button class="btn btn-secondary" onclick="queryRangeRates(30)">🗓️ Bu Ay (30 gün)</button>
+        </div>
+        <div id="histResult" style="overflow-x:auto;"></div>
+      </div>
+      <div class="rateHead" id="rateHeadCards"></div>
+      <div class="grid2">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:12px;">Döviz Çeviricisi</div>
+          <div class="field2" style="margin-bottom:10px;"><label>Miktar</label><input id="conv_amount" type="number" value="100" oninput="doConvert()"></div>
+          <div class="grid2" style="gap:10px;">
+            <div class="field2"><label>Kaynak</label><select id="conv_from" onchange="doConvert()"></select></div>
+            <div class="field2"><label>Hedef</label><select id="conv_to" onchange="doConvert()"></select></div>
+          </div>
+          <div style="margin-top:16px;font-size:26px;font-weight:800;color:var(--accent);" id="conv_result">-</div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:12px;">Tüm Kurlar (TRY Karşılığı)</div>
+          <div style="overflow-x:auto;max-height:340px;overflow-y:auto;">
+            <table class="rateTable"><thead><tr><th>Döviz</th><th>Döviz Alış</th><th>Döviz Satış</th><th>Efektif Alış</th><th>Efektif Satış</th></tr></thead>
+              <tbody id="rateTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AYARLAR -->
+    <section class="view" id="view-settings">
+      <div class="pageHead"><button class="backBtn" onclick="showView('dashboard')">← Ana Menü</button><h1 class="pageTitle">Ayarlar</h1></div>
+      <div class="settingsTabs" id="settingsTabs">
+        <div class="stab active" data-tab="link" onclick="switchSettingsTab('link')">🔗 Misafir Form Linki</div>
+        <div class="stab" data-tab="tablet" onclick="switchSettingsTab('tablet')">📱 Tablet Form Görünümü</div>
+        <div class="stab" data-tab="a4" onclick="switchSettingsTab('a4')">📄 A4 Form Çıktı</div>
+        <div class="stab" data-tab="theme" onclick="switchSettingsTab('theme')">🎨 Tema &amp; Renkler</div>
+        <div class="stab" data-tab="general" onclick="switchSettingsTab('general')">🏢 Genel Ayarlar</div>
+        <div class="stab" data-tab="staff" onclick="switchSettingsTab('staff')">👥 Personel Yönetimi</div>
+        <div class="stab" data-tab="wa" onclick="switchSettingsTab('wa')">💬 WhatsApp Şablonları</div>
+      </div>
+
+      <div class="settingsPane active" id="pane-link">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:4px;">🔗 Misafir Form Linki</div>
+          <div style="font-size:12.5px;color:var(--dim);margin-bottom:12px;">Bu linki misafirlere göndererek tablet, telefon ya da bilgisayardan form doldurmalarını sağlayabilirsiniz.</div>
+          <div class="linkBox"><span id="guestFormLink">-</span><button class="btn btn-outline" style="padding:6px 10px;" onclick="copyText('guestFormLink')">Kopyala</button></div>
+          <div class="formActions">
+            <button class="btn btn-primary" onclick="sendFormWhatsapp()">💬 WhatsApp ile Gönder</button>
+            <button class="btn btn-secondary" onclick="window.open(document.getElementById('guestFormLink').textContent,'_blank')">↗ Formu Aç</button>
+          </div>
+          <div style="font-size:12px;color:var(--dim2);margin-top:12px;">💡 Bu linki tablet tarayıcısına da yapıştırabilirsiniz. Misafirler Türkçe, İngilizce, Almanca ve Rusça olarak formu doldurabilir.</div>
+        </div>
+      </div>
+
+      <div class="settingsPane" id="pane-tablet">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:14px;">📱 Tablet / Misafir Form Görünümü</div>
+          <div class="field2" style="margin-bottom:14px;"><label>Arka Plan Resmi</label>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <img id="tabletBgPreview" style="width:56px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+              <input type="file" id="tabletBgFile" accept="image/*" style="display:none;" onchange="uploadImage(this,'formBgUrl','tabletBgPreview')">
+              <button class="btn btn-secondary" onclick="document.getElementById('tabletBgFile').click()">⬆ Arka Plan Resmi Yükle</button>
+              <button class="btn btn-outline" onclick="clearSetting('formBgUrl','tabletBgPreview')">Kaldır</button>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="field2"><label>Arka Plan Rengi</label><div class="swatchRow"><input type="color" class="swatch" id="formBgColor"><input id="formBgColorHex" oninput="syncColor('formBgColor','formBgColorHex')"></div></div>
+            <div class="field2"><label>Yazı Rengi</label><div class="swatchRow"><input type="color" class="swatch" id="formTextColor"><input id="formTextColorHex" oninput="syncColor('formTextColor','formTextColorHex')"></div></div>
+          </div>
+          <div class="formActions"><button class="btn btn-primary" onclick="saveTabletSettings()">🎨 Renkleri Kaydet</button></div>
+          <div style="font-weight:700;margin:18px 0 8px;font-size:13px;color:var(--dim);">Önizleme</div>
+          <div id="tabletPreviewBox" style="height:70px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;background-size:cover;background-position:center;">Misafir Kayıt Formu</div>
+          <div class="field2" style="margin-top:18px;"><label>Logo</label>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <img id="logoPreview" style="width:50px;height:50px;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:#111;">
+              <input type="file" id="logoFile" accept="image/*" style="display:none;" onchange="uploadImage(this,'logoUrl','logoPreview')">
+              <button class="btn btn-secondary" onclick="document.getElementById('logoFile').click()">⬆ Logo Yükle</button>
+              <span style="font-size:12px;color:var(--dim2);">Bilgisayarınızdan logo seçin (PNG/JPG)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settingsPane" id="pane-a4">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:4px;">📄 A4 Form Çıktı Ayarları</div>
+          <div style="font-size:12.5px;color:var(--dim);margin-bottom:14px;">A4 çıktı formunun arka plan rengini, arka plan resmini ve form logosunu buradan değiştirebilirsiniz.</div>
+          <div class="field2" style="margin-bottom:14px;"><label>Form Logosu (A4 çıktıda görünecek)</label>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <img id="a4LogoPreview" style="width:50px;height:50px;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:#fff;">
+              <input type="file" id="a4LogoFile" accept="image/*" style="display:none;" onchange="uploadImage(this,'a4LogoUrl','a4LogoPreview')">
+              <button class="btn btn-secondary" onclick="document.getElementById('a4LogoFile').click()">⬆ Form Logosu Yükle</button>
+            </div>
+            <div style="font-size:11.5px;color:var(--dim2);margin-top:4px;">Boş bırakırsanız ana logo kullanılır</div>
+          </div>
+          <div class="field2" style="margin-bottom:14px;"><label>Arka Plan Resmi</label>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <img id="a4BgPreview" style="width:56px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+              <input type="file" id="a4BgFile" accept="image/*" style="display:none;" onchange="uploadImage(this,'a4BgUrl','a4BgPreview')">
+              <button class="btn btn-secondary" onclick="document.getElementById('a4BgFile').click()">⬆ Arka Plan Resmi Yükle</button>
+              <button class="btn btn-outline" onclick="clearSetting('a4BgUrl','a4BgPreview')">Kaldır</button>
+            </div>
+          </div>
+          <div class="formGrid">
+            <div class="field2"><label>Arka Plan Rengi</label><div class="swatchRow"><input type="color" class="swatch" id="a4BgColor"><input id="a4BgColorHex" oninput="syncColor('a4BgColor','a4BgColorHex')"></div></div>
+            <div class="field2"><label>Yazı Rengi</label><div class="swatchRow"><input type="color" class="swatch" id="a4TextColor"><input id="a4TextColorHex" oninput="syncColor('a4TextColor','a4TextColorHex')"></div></div>
+            <div class="field2"><label>Vurgu Rengi</label><div class="swatchRow"><input type="color" class="swatch" id="a4AccentColor"><input id="a4AccentColorHex" oninput="syncColor('a4AccentColor','a4AccentColorHex')"></div></div>
+          </div>
+          <div class="formActions"><button class="btn btn-primary" onclick="saveA4Settings()">🎨 Renkleri Kaydet</button></div>
+        </div>
+      </div>
+
+      <div class="settingsPane" id="pane-theme">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:14px;">🎭 Tema &amp; Renkler</div>
+          <div style="font-size:12.5px;color:var(--dim);margin-bottom:14px;">Uygulamanın renklerini ve yazı stilini buradan değiştirebilirsiniz.</div>
+          <div class="themeGrid" id="themeGrid">
+            <div class="themeOpt" data-theme="gold" onclick="pickTheme('gold')"><span class="dots"><i style="background:#3a2a10;"></i><i style="background:#ff9d2f;"></i></span>Koyu Altın</div>
+            <div class="themeOpt" data-theme="navy" onclick="pickTheme('navy')"><span class="dots"><i style="background:#12203a;"></i><i style="background:#4da3ff;"></i></span>Gece Mavisi</div>
+            <div class="themeOpt" data-theme="green" onclick="pickTheme('green')"><span class="dots"><i style="background:#0e2b1f;"></i><i style="background:#3ecf8e;"></i></span>Koyu Yeşil</div>
+            <div class="themeOpt" data-theme="red" onclick="pickTheme('red')"><span class="dots"><i style="background:#2b1010;"></i><i style="background:#ff5c5c;"></i></span>Koyu Kırmızı</div>
+            <div class="themeOpt" data-theme="orange" onclick="pickTheme('orange')"><span class="dots"><i style="background:#1a1a1a;"></i><i style="background:#ffb020;"></i></span>Siyah &amp; Turuncu</div>
+            <div class="themeOpt" data-theme="grey" onclick="pickTheme('grey')"><span class="dots"><i style="background:#2a2a2a;"></i><i style="background:#d0a030;"></i></span>Antrasit</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settingsPane" id="pane-general">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:14px;">🏢 Genel Ayarlar</div>
+          <div class="formGrid">
+            <div class="field2 full"><label>Akademi Adı</label><input id="g_academyName"></div>
+            <div class="field2 full"><label>Alt Başlık</label><input id="g_subtitle"></div>
+            <div class="field2 full"><label>Adres Bilgisi</label><input id="g_address"></div>
+            <div class="field2"><label>Telefon</label><input id="g_phone"></div>
+            <div class="field2"><label>İletişim E-Posta</label><input id="g_email"></div>
+          </div>
+          <div class="formActions"><button class="btn btn-primary" onclick="saveGeneralSettings()">💾 Kaydet</button></div>
+        </div>
+      </div>
+
+      <div class="settingsPane" id="pane-staff">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:4px;">👥 Personel Yönetimi</div>
+          <div style="font-size:12.5px;color:var(--dim);margin-bottom:14px;">Bu uygulama aynı anda birden fazla bilgisayardan kullanılabilir. Her personel kendi hesabıyla giriş yapar ve tüm veriler anlık olarak senkronize edilir.</div>
+          <div style="font-size:12.5px;color:var(--dim);margin-bottom:8px;">Yeni personel eklemek için aşağıdaki linki paylaşın. Personel bu link üzerinden giriş yaptığında otomatik olarak sisteme eklenir.</div>
+          <div class="linkBox"><span id="staffInviteLink">-</span><button class="btn btn-outline" style="padding:6px 10px;" onclick="copyText('staffInviteLink')">Kopyala</button></div>
+          <div style="font-size:11.5px;color:var(--dim2);margin:8px 0 16px;">💡 Yeni personel eklendiğinde sonra buradan rolünü "Admin" veya "Personel" olarak ayarlayabilirsiniz.</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:13px;color:var(--dim);" id="staffCountLine">Toplam: 0 · Admin: 0 · Personel: 0</span>
+            <button class="btn btn-outline" style="padding:6px 12px;" onclick="renderStaff()">🔄 Yenile</button>
+          </div>
+          <div id="staffList"></div>
+        </div>
+      </div>
+
+      <div class="settingsPane" id="pane-wa">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:4px;">💬 WhatsApp Mesaj Şablonları</div>
+          <div style="font-size:12.5px;color:var(--dim);margin-bottom:14px;">Mesajda {name} yazarsanız misafir adı otomatik yerleştirilir.</div>
+          <div class="field2" style="margin-bottom:12px;"><label>WhatsApp Mesajı (Türkçe)</label><textarea id="wa_tr">Merhaba {name}, Megasaray Tennis Academy kaydınız alınmıştır.</textarea></div>
+          <div class="field2" style="margin-bottom:12px;"><label>WhatsApp Message (English)</label><textarea id="wa_en">Hello {name}, your registration at Megasaray Tennis Academy has been received.</textarea></div>
+          <div class="field2" style="margin-bottom:12px;"><label>WhatsApp Nachricht (Deutsch)</label><textarea id="wa_de">Hallo {name}, Ihre Anmeldung bei Megasaray Tennis Academy wurde erhalten.</textarea></div>
+          <div class="field2" style="margin-bottom:12px;"><label>WhatsApp Сообщение (Русский)</label><textarea id="wa_ru">Здравствуйте {name}, ваша регистрация в Megasaray Tennis Academy получена.</textarea></div>
+          <div class="formActions"><button class="btn btn-primary" onclick="saveWaTemplates()">💾 Şablonları Kaydet</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div style="text-align:center;padding:18px;font-size:11px;color:var(--dim2);">© 2026 Megasaray Hotels &amp; MTA Tennis Academy. Tüm hakları saklıdır.</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Player detail / edit modal -->
+<div class="modalOverlay" id="playerModal">
+  <div class="modalBox">
+    <h2>Kayıt Detayı</h2>
+    <div id="playerModalBody"></div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+/* ================= FIREBASE CONFIG =================
+   Kendi Firebase projenizin bilgilerini buraya yapıştırın.
+   Firebase Console > Project Settings > General > "Your apps" > Web app
+====================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCrYxMnxRrDWxFdWVGKWaHKCg34rVVI3dM",
+  authDomain: "mta-forum-f7dae.firebaseapp.com",
+  projectId: "mta-forum-f7dae",
+  storageBucket: "mta-forum-f7dae.firebasestorage.app",
+  messagingSenderId: "1063637635196",
+  appId: "1:1063637635196:web:32f98bfec7759f7346b9f9"
+};
+// Misafir formunun yayınlandığı adres (Netlify vb.) — Ayarlar > Misafir Form Linki burada gösterilir.
+const GUEST_FORM_URL = "https://silly-cheesecake-8f7c86.netlify.app/";
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let currentUser = null;
+let currentStaffDoc = null;
+let players = [];
+let coaches = [];
+let staffList = [];
+let settings = {};
+let ratesData = null;
+let rateCache = {}; // { 'yyyy-mm-dd': [ {code,name,buy,sell,effBuy,effSell}, ... ] }
+let reportRows = [];
+
+/* ---------------- AUTH ---------------- */
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  document.getElementById('loginErr').textContent = '';
+  if(!email || !pass){ document.getElementById('loginErr').textContent = 'E-posta ve şifre gerekli.'; return; }
+  auth.signInWithEmailAndPassword(email, pass).catch(err=>{
+    document.getElementById('loginErr').textContent = 'Giriş başarısız: ' + friendlyAuthError(err.code);
+  });
+}
+function doLogout(){ auth.signOut(); }
+function friendlyAuthError(code){
+  if(code==='auth/wrong-password'||code==='auth/invalid-credential') return 'E-posta veya şifre hatalı.';
+  if(code==='auth/user-not-found') return 'Bu e-posta ile kayıtlı personel bulunamadı.';
+  if(code==='auth/too-many-requests') return 'Çok fazla deneme yapıldı, lütfen bekleyin.';
+  return code || 'Bilinmeyen hata';
+}
+
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    currentUser = user;
+    const staffRef = db.collection('staff').doc(user.uid);
+    const snap = await staffRef.get();
+    if(!snap.exists){
+      await staffRef.set({
+        name: user.displayName || user.email.split('@')[0],
+        email: user.email,
+        role: 'personel',
+        active: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    staffRef.onSnapshot(doc=>{
+      currentStaffDoc = doc.data();
+      document.getElementById('userNameChip').textContent = currentStaffDoc.name || user.email;
+      document.getElementById('userRoleChip').textContent = currentStaffDoc.role === 'admin' ? 'Admin' : 'Personel';
+      if(currentStaffDoc.active === false){
+        showToast('Hesabınız pasif durumda. Yönetici ile iletişime geçin.');
+        auth.signOut();
+      }
+    });
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    startClock();
+    listenAll();
+  } else {
+    currentUser = null;
+    document.getElementById('loginScreen').style.display='flex';
+    document.getElementById('app').style.display='none';
+  }
+});
+
+/* ---------------- NAV ---------------- */
+function showView(id, fromPopstate){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  if(id==='reports'){ document.getElementById('reportResultCard').style.display='none'; }
+  if(id==='newform'){ clearPlayerForm(); }
+  if(!fromPopstate){
+    if(id==='dashboard'){ history.replaceState({view:'dashboard'}, ''); }
+    else { history.pushState({view:id}, ''); }
+  }
+}
+// Telefon/tarayıcının fiziksel veya tarayıcı "geri" tuşuna basıldığında da ana menüye dön
+window.addEventListener('popstate', e=>{
+  const view = (e.state && e.state.view) || 'dashboard';
+  showView(view, true);
+});
+history.replaceState({view:'dashboard'}, '');
+function switchSettingsTab(tab){
+  document.querySelectorAll('.stab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  document.querySelectorAll('.settingsPane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pane-'+tab).classList.add('active');
+}
+function toggleSwitch(el){ el.classList.toggle('on'); }
+
+/* ---------------- CLOCK ---------------- */
+function startClock(){
+  function tick(){
+    const now = new Date();
+    const days=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+    const months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    document.getElementById('dashDate').textContent = days[now.getDay()]+', '+now.getDate()+' '+months[now.getMonth()]+' '+now.getFullYear();
+    const h=String(now.getHours()).padStart(2,'0'), m=String(now.getMinutes()).padStart(2,'0'), s=String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('dashClock').innerHTML = h+':'+m+'<span class="sec">:'+s+'</span>';
+  }
+  tick(); setInterval(tick,1000);
+}
+
+/* ---------------- REALTIME LISTENERS ---------------- */
+function listenAll(){
+  db.collection('players').orderBy('createdAt','desc').onSnapshot(qs=>{
+    players = qs.docs.map(d=>({id:d.id, ...d.data()}));
+    renderRecords();
+  });
+  db.collection('coaches').orderBy('name').onSnapshot(qs=>{
+    coaches = qs.docs.map(d=>({id:d.id, ...d.data()}));
+    renderCoaches();
+    fillCoachSelect();
+  });
+  db.collection('staff').onSnapshot(qs=>{
+    staffList = qs.docs.map(d=>({id:d.id, ...d.data()}));
+    renderStaff();
+  });
+  db.collection('settings').doc('general').onSnapshot(doc=>{
+    settings = doc.exists ? doc.data() : {};
+    applySettingsToUI();
+  });
+  fetchRates(false);
+}
+
+/* ================= YENİ FORM / KAYIT ================= */
+function clearPlayerForm(){
+  ['f_fullName','f_age','f_nationality','f_tcNo','f_email','f_phone','f_roomNo','f_packageDuration','f_priceEUR','f_priceTRY','f_note','f_installmentInfo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_countryCode').value='+90';
+  document.getElementById('f_coachId').value='';
+  document.getElementById('f_packageType').value='';
+  document.getElementById('f_paymentMethod').value='';
+  document.getElementById('f_date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f_pmSwitch').classList.remove('on');
+  window.editingPlayerId = null;
+}
+function fillCoachSelect(){
+  const sel = document.getElementById('f_coachId');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Seçiniz (opsiyonel)</option>' +
+    coaches.filter(c=>c.active!==false).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  sel.value = cur;
+}
+async function savePlayer(print=false, whatsapp=false){
+  const fullName = document.getElementById('f_fullName').value.trim();
+  if(!fullName){ showToast('Ad Soyad zorunludur.'); return; }
+  const coachId = document.getElementById('f_coachId').value;
+  const coachName = coachId ? (coaches.find(c=>c.id===coachId)||{}).name || '' : '';
+  const data = {
+    fullName,
+    age: document.getElementById('f_age').value || '',
+    nationality: document.getElementById('f_nationality').value || '',
+    tcNo: document.getElementById('f_tcNo').value || '',
+    email: document.getElementById('f_email').value || '',
+    countryCode: document.getElementById('f_countryCode').value,
+    phone: document.getElementById('f_phone').value || '',
+    date: document.getElementById('f_date').value || '',
+    roomNo: document.getElementById('f_roomNo').value || '',
+    coachId, coachName,
+    packageType: document.getElementById('f_packageType').value || '',
+    paymentMethod: document.getElementById('f_paymentMethod').value || '',
+    packageDuration: document.getElementById('f_packageDuration').value || '',
+    priceEUR: parseFloat(document.getElementById('f_priceEUR').value) || 0,
+    priceTRY: parseFloat(document.getElementById('f_priceTRY').value) || 0,
+    note: document.getElementById('f_note').value || '',
+    installmentInfo: document.getElementById('f_installmentInfo').value || '',
+    pmAfternoon: document.getElementById('f_pmSwitch').classList.contains('on'),
+    status: 'pending',
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  try{
+    let id = window.editingPlayerId;
+    if(id){
+      await db.collection('players').doc(id).update(data);
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      data.createdBy = currentUser.uid;
+      data.createdByName = (currentStaffDoc && currentStaffDoc.name) || currentUser.email;
+      const ref = await db.collection('players').add(data);
+      id = ref.id;
+    }
+    showToast('Kayıt kaydedildi ✅');
+    if(print) printPlayer(id, {id, ...data});
+    if(whatsapp) sendPlayerWhatsapp({id, ...data});
+    showView('records');
+  }catch(e){ showToast('Hata: '+e.message); }
+}
+
+/* ================= KAYITLAR LİSTESİ ================= */
+function renderRecords(){
+  const q = document.getElementById('recSearch').value.toLowerCase();
+  const st = document.getElementById('recStatusFilter').value;
+  const sort = document.getElementById('recSortFilter').value;
+  let list = players.filter(p=>{
+    if(q && !(p.fullName||'').toLowerCase().includes(q)) return false;
+    if(st && p.status!==st) return false;
+    return true;
+  });
+  if(sort==='date_asc') list.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  else if(sort==='name_asc') list.sort((a,b)=>(a.fullName||'').localeCompare(b.fullName||''));
+  else list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  const box = document.getElementById('recordsList');
+  if(!list.length){ box.innerHTML = '<div class="emptyState">Henüz kayıt yok.</div>'; return; }
+  box.innerHTML = list.map(p=>{
+    const stMap = {done:['Yapıldı','st-done'], notdone:['Yapılmadı','st-notdone'], pending:['Beklemede','st-pending'], cancelled:['İptal Oldu','st-cancelled']};
+    const stInfo = stMap[p.status] || stMap.pending;
+    return `<div class="recRow">
+      <div class="recInfo">
+        <div class="name">${escapeHtml(p.fullName)}</div>
+        <div class="sub">${p.date||''} · ${escapeHtml(p.packageType||'-')} · Oda ${escapeHtml(p.roomNo||'-')}</div>
+      </div>
+      <div class="recPrice">
+        <div><span class="eur">€${(p.priceEUR||0).toFixed(2)}</span> / <span class="try">₺${(p.priceTRY||0).toFixed(2)}</span></div>
+        <span class="statusBadge ${stInfo[1]}">${stInfo[0]}</span>
+      </div>
+      <div class="recActions">
+        <button class="iconBtn" title="Görüntüle/Düzenle" onclick="openPlayer('${p.id}')">👁️</button>
+        <button class="iconBtn" title="WhatsApp" onclick="sendPlayerWhatsapp(${JSON.stringify(p).replace(/"/g,'&quot;')})">💬</button>
+        <button class="iconBtn" title="Yazdır" onclick="printPlayer('${p.id}', ${JSON.stringify(p).replace(/"/g,'&quot;')})">🖨️</button>
+        <button class="iconBtn" title="Sil" onclick="deletePlayer('${p.id}','${escapeHtml(p.fullName)}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openPlayer(id){
+  const p = players.find(x=>x.id===id);
+  if(!p) return;
+  window.editingPlayerId = id;
+  const coachOptions = coaches.filter(c=>c.active!==false).map(c=>`<option value="${c.id}" ${p.coachId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+  document.getElementById('playerModalBody').innerHTML = `
+    <div class="formGrid">
+      <div class="field2 full"><label>Ad Soyad *</label><input id="m_fullName" value="${escapeAttr(p.fullName)}"></div>
+      <div class="field2"><label>Yaş</label><input id="m_age" type="number" value="${escapeAttr(p.age)}"></div>
+      <div class="field2"><label>Uyruk</label><input id="m_nationality" value="${escapeAttr(p.nationality)}"></div>
+      <div class="field2"><label>T.C. Kimlik No</label><input id="m_tcNo" value="${escapeAttr(p.tcNo)}"></div>
+      <div class="field2 full"><label>E-Posta</label><input id="m_email" type="email" value="${escapeAttr(p.email)}"></div>
+      <div class="field2"><label>Ülke Kodu</label>
+        <select id="m_countryCode">
+          ${['+90','+49','+7','+44','+1','+971'].map(c=>`<option ${p.countryCode===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field2"><label>Telefon</label><input id="m_phone" value="${escapeAttr(p.phone)}"></div>
+      <div class="field2"><label>Tarih</label><input id="m_date" type="date" value="${escapeAttr(p.date)}"></div>
+      <div class="field2"><label>Oda No</label><input id="m_roomNo" value="${escapeAttr(p.roomNo)}"></div>
+      <div class="field2"><label>Antrenör</label>
+        <select id="m_coachId"><option value="">Seçiniz (opsiyonel)</option>${coachOptions}</select>
+      </div>
+      <div class="field2"><label>Paket Türü</label>
+        <select id="m_packageType">
+          <option value="">Seçiniz</option>
+          ${['Junior Pro Performance','Private Lessons','Group Lessons','Members','Balls','Courts'].map(pk=>`<option ${p.packageType===pk?'selected':''}>${pk}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field2"><label>Ödeme Yöntemi</label>
+        <select id="m_paymentMethod">
+          <option value="">Seçiniz</option>
+          ${['Nakit','Kredi Kartı','Havale/EFT','Taksitli'].map(pm=>`<option ${p.paymentMethod===pm?'selected':''}>${pm}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field2 full"><label>Paket Süresi</label><input id="m_packageDuration" value="${escapeAttr(p.packageDuration)}"></div>
+      <div class="field2"><label>Fiyat (EUR) €</label><input id="m_priceEUR" type="number" step="0.01" value="${p.priceEUR||0}"></div>
+      <div class="field2"><label>Fiyat (TRY) ₺</label><input id="m_priceTRY" type="number" step="0.01" value="${p.priceTRY||0}"></div>
+      <div class="field2 full"><label>Not</label><textarea id="m_note">${escapeHtml(p.note||'')}</textarea></div>
+      <div class="field2 full"><label>Taksit Bilgisi</label><textarea id="m_installmentInfo">${escapeHtml(p.installmentInfo||'')}</textarea></div>
+      <div class="field2 full">
+        <div class="toggleRow">
+          <div class="switch ${p.pmAfternoon?'on':''}" id="m_pmSwitch" onclick="toggleSwitch(this)"><div class="dot"></div></div>
+          <label style="margin:0;">P.M. (Öğleden Sonra)</label>
+        </div>
+      </div>
+      <div class="field2 full"><label>Durum</label>
+        <select id="m_status">
+          <option value="done" ${p.status==='done'?'selected':''}>Yapıldı</option>
+          <option value="notdone" ${p.status==='notdone'?'selected':''}>Yapılmadı</option>
+          <option value="pending" ${(!p.status||p.status==='pending')?'selected':''}>Beklemede</option>
+          <option value="cancelled" ${p.status==='cancelled'?'selected':''}>İptal Oldu</option>
+        </select>
+      </div>
+    </div>
+    <div class="formActions">
+      <button class="btn btn-primary" onclick="saveModalPlayer('${id}')">💾 Değişiklikleri Kaydet</button>
+      <button class="btn btn-secondary" onclick="printPlayer('${id}', ${JSON.stringify(p).replace(/"/g,'&quot;')})">🖨️ Yazdır</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Vazgeç</button>
+    </div>`;
+  document.getElementById('playerModal').classList.add('open');
+}
+async function saveModalPlayer(id){
+  const coachSel = document.getElementById('m_coachId');
+  const coachName = coachSel.value ? (coaches.find(c=>c.id===coachSel.value)||{}).name || '' : '';
+  await db.collection('players').doc(id).update({
+    fullName: document.getElementById('m_fullName').value,
+    age: document.getElementById('m_age').value,
+    nationality: document.getElementById('m_nationality').value,
+    tcNo: document.getElementById('m_tcNo').value,
+    email: document.getElementById('m_email').value,
+    countryCode: document.getElementById('m_countryCode').value,
+    phone: document.getElementById('m_phone').value,
+    date: document.getElementById('m_date').value,
+    roomNo: document.getElementById('m_roomNo').value,
+    coachId: coachSel.value, coachName,
+    packageType: document.getElementById('m_packageType').value,
+    paymentMethod: document.getElementById('m_paymentMethod').value,
+    packageDuration: document.getElementById('m_packageDuration').value,
+    status: document.getElementById('m_status').value,
+    priceEUR: parseFloat(document.getElementById('m_priceEUR').value)||0,
+    priceTRY: parseFloat(document.getElementById('m_priceTRY').value)||0,
+    note: document.getElementById('m_note').value,
+    installmentInfo: document.getElementById('m_installmentInfo').value,
+    pmAfternoon: document.getElementById('m_pmSwitch').classList.contains('on'),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Güncellendi ✅');
+  closeModal();
+}
+function closeModal(){ document.getElementById('playerModal').classList.remove('open'); }
+async function deletePlayer(id,name){
+  if(!confirm(`"${name}" adlı misafirin tüm bilgilerini kalıcı olarak silmek istediğinize emin misiniz?`)) return;
+  await db.collection('players').doc(id).delete();
+  showToast('Kayıt silindi.');
+}
+function sendPlayerWhatsapp(p){
+  const lang = 'wa_tr';
+  let template = (settings.waTemplates && settings.waTemplates.tr) || 'Merhaba {name}, kaydınız alınmıştır.';
+  const msg = template.replace('{name}', p.fullName||'');
+  const phone = (p.countryCode||'').replace('+','') + (p.phone||'').replace(/\D/g,'');
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+function radioHtml(isChecked, color){
+  color = color || (settings.a4AccentColor || '#1c6b57');
+  return isChecked
+    ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1.6px solid ${color};vertical-align:middle;"><span style="width:7px;height:7px;border-radius:50%;background:${color};"></span></span>`
+    : `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;border:1.6px solid #999;vertical-align:middle;"></span>`;
+}
+function buildA4Form(p){
+  const accent = settings.a4AccentColor || '#1c6b57';
+  const valueColor = settings.a4TextColor || '#2c4a52';
+  const cardBg = settings.a4BgColor || '#eceeee';
+  const logo = settings.a4LogoUrl || settings.logoUrl || A4_LOGO_FALLBACK;
+  const academyName = settings.academyName || 'MEGASARAY TENNIS ACADEMY';
+  const address = settings.address || 'Belek, Kadriye Mh. Üçkum Tepesi Cd. No:8/1, 07500 Serik/ANTALYA';
+  const phone = settings.phone || '+90 242 710 11 00';
+  const email = settings.email || 'info@clubmegasaray.com';
+
+  const dateParts = (p.date||'').split('-'); // yyyy-mm-dd
+  const dateStr = dateParts.length===3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : (p.date||'');
+  const pkg = p.packageType || '';
+  const pay = p.paymentMethod || '';
+  const packages = ['Junior Pro Performance','Private Lessons','Group Lessons','Members','Balls','Courts'];
+
+  const row = (label, value, extra) => `
+    <div style="display:flex;padding:9px 0;border-bottom:1px solid #e2e2e2;font-size:13px;">
+      <div style="width:150px;font-weight:700;color:#333;">${label} :</div>
+      <div style="flex:1;color:${valueColor};">${escapeHtml(value||'')}</div>
+      ${extra ? `<div style="width:170px;font-weight:700;color:#333;">${extra.label} :</div><div style="flex:1;color:${valueColor};">${escapeHtml(extra.value||'')}</div>` : ''}
+    </div>`;
+
+  return `
+  <div style="position:relative;width:210mm;min-height:297mm;background:#f4f4f4;font-family:'Segoe UI',Arial,sans-serif;overflow:hidden;box-sizing:border-box;padding:14mm;">
+    <div style="position:absolute;top:-40px;left:-40px;width:260px;height:260px;background:radial-gradient(circle,#ff9d2f,#ff6a1f 55%,transparent 75%);filter:blur(18px);opacity:.55;"></div>
+    <div style="position:absolute;top:-30px;right:-30px;width:180px;height:420px;background:radial-gradient(circle,#ffb54d,#ff7a1f 60%,transparent 78%);filter:blur(20px);opacity:.5;"></div>
+    <div style="position:absolute;bottom:26px;left:20px;width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e9ff8a,#8fae3d 75%);box-shadow:0 4px 10px rgba(0,0,0,.15);"></div>
+    <div style="position:absolute;bottom:14px;left:74px;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e9ff8a,#8fae3d 75%);box-shadow:0 4px 10px rgba(0,0,0,.15);"></div>
+    <div style="position:absolute;bottom:6px;left:150px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e9ff8a,#8fae3d 75%);box-shadow:0 4px 10px rgba(0,0,0,.15);"></div>
+
+    <div style="position:relative;background:${cardBg};border-radius:26px;padding:34px 42px 26px;box-shadow:0 12px 34px rgba(0,0,0,.12);z-index:2;">
+      <div style="text-align:center;">
+        <img src="${logo}" style="height:70px;object-fit:contain;">
+        <div style="font-weight:800;font-size:19px;color:${accent};margin-top:10px;letter-spacing:.5px;">${escapeHtml(academyName.toUpperCase())}</div>
+        <div style="font-weight:800;font-size:15px;color:${accent};letter-spacing:1px;margin-top:2px;">PLAYER PACKAGE FORM</div>
+      </div>
+
+      <div style="text-align:right;font-size:11.5px;color:#333;margin:14px 0 4px;">
+        <b>DATE:</b> ${escapeHtml(dateStr)} &nbsp;&nbsp; <b>ROOM:</b> ${escapeHtml(p.roomNo||'-')} &nbsp;&nbsp; <b>COACH:</b> ${escapeHtml(p.coachName||'-')} &nbsp;&nbsp; <b>P.M.:</b> ${p.pmAfternoon ? `<span style="color:${accent};font-weight:800;">&#10003;</span>` : '-'}
+      </div>
+
+      ${row('Full Name', p.fullName)}
+      ${row('Age', p.age)}
+      ${row('Nationality', p.nationality, {label:'T.C Identity Number', value:p.tcNo})}
+      ${row('E-Mail', p.email)}
+      ${row('Phone Number', (p.countryCode||'')+' '+(p.phone||''))}
+
+      <div style="display:flex;gap:40px;margin-top:22px;">
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:13.5px;color:${accent};border-bottom:2px solid ${accent};padding-bottom:6px;margin-bottom:10px;">Type Of Package</div>
+          ${packages.map(pk=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px;color:#333;">${radioHtml(pkg===pk, accent)}<span>${pk}</span></div>`).join('')}
+        </div>
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:13.5px;color:${accent};border-bottom:2px solid ${accent};padding-bottom:6px;margin-bottom:10px;">Payment Method</div>
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px;color:#333;">${radioHtml(pay==='Nakit', accent)}<span>Cash</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px;color:#333;">${radioHtml(pay==='Kredi Kartı', accent)}<span>Credit Card</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px;color:#333;">${radioHtml(pay==='Havale/EFT', accent)}<span>Bank Wire</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;">
+        ${row('Package Duration', p.packageDuration)}
+        ${row('Package Price (EUR)', p.priceEUR ? ('€'+Number(p.priceEUR).toFixed(2)) : '')}
+        ${row('Package Price (TRY)', p.priceTRY ? ('₺'+Number(p.priceTRY).toFixed(2)) : '')}
+        ${row('Note', p.note)}
+      </div>
+
+      <div style="font-weight:800;font-size:13.5px;color:${accent};border-bottom:2px solid ${accent};padding-bottom:6px;margin:20px 0 8px;">Installments</div>
+      <div style="font-size:12.5px;color:${valueColor};min-height:16px;margin-bottom:36px;">${escapeHtml(p.installmentInfo || 'Full payment upfront')}</div>
+
+      <div style="display:flex;justify-content:space-between;gap:60px;margin-bottom:6px;">
+        <div style="flex:1;text-align:center;">
+          <div style="border-top:1px solid #999;padding-top:6px;font-size:11.5px;color:${valueColor};">Full Name And Signature</div>
+        </div>
+        <div style="flex:1;text-align:center;">
+          <div style="border-top:1px solid #999;padding-top:6px;font-size:11.5px;color:${valueColor};">${escapeHtml(academyName.toUpperCase())}</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:10px;color:#777;margin-top:22px;">
+        megasarayhotels.com &nbsp;|&nbsp; <b>${escapeHtml(academyName.toUpperCase())}</b> &nbsp;|&nbsp; ${escapeHtml(address)}<br>
+        T: ${escapeHtml(phone)} &nbsp;|&nbsp; ${escapeHtml(email)}
+      </div>
+    </div>
+  </div>`;
+}
+function printPlayer(id, p){
+  const area = document.getElementById('printArea');
+  area.innerHTML = buildA4Form(p);
+  setTimeout(()=>window.print(), 200);
+}
+
+/* ================= ANTRENÖRLER ================= */
+async function saveCoach(){
+  const name = document.getElementById('c_name').value.trim();
+  if(!name){ showToast('Antrenör adı gerekli.'); return; }
+  await db.collection('coaches').add({
+    name, phone: document.getElementById('c_phone').value.trim(), active:true,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  document.getElementById('c_name').value=''; document.getElementById('c_phone').value='';
+  showToast('Antrenör eklendi.');
+}
+function renderCoaches(){
+  const box = document.getElementById('coachesList');
+  if(!coaches.length){ box.innerHTML='<div class="emptyState">Henüz antrenör eklenmedi.</div>'; return; }
+  box.innerHTML = coaches.map(c=>`
+    <div class="coachRow">
+      <div><div class="name">${escapeHtml(c.name)}</div><div class="phone">${escapeHtml(c.phone||'-')}</div></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span class="statusBadge ${c.active!==false?'st-active':'st-inactive'}">${c.active!==false?'Aktif':'Pasif'}</span>
+        <button class="iconBtn" onclick="editCoach('${c.id}')">✏️</button>
+        <button class="iconBtn" onclick="toggleCoach('${c.id}', ${c.active!==false})">${c.active!==false?'⏸️':'▶️'}</button>
+        <button class="iconBtn" onclick="deleteCoach('${c.id}')">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+async function toggleCoach(id, isActive){ await db.collection('coaches').doc(id).update({active: !isActive}); }
+async function deleteCoach(id){ if(confirm('Bu antrenörü silmek istiyor musunuz?')) await db.collection('coaches').doc(id).delete(); }
+function editCoach(id){
+  const c = coaches.find(x=>x.id===id); if(!c) return;
+  const newName = prompt('Antrenör adı:', c.name); if(newName===null) return;
+  const newPhone = prompt('Telefon:', c.phone||''); if(newPhone===null) return;
+  db.collection('coaches').doc(id).update({name:newName, phone:newPhone});
+}
+
+/* ================= RAPORLAR ================= */
+function toggleAllPkg(){
+  const boxes = document.querySelectorAll('#pkgChips input');
+  const allChecked = [...boxes].every(b=>b.checked);
+  boxes.forEach(b=>b.checked = !allChecked);
+}
+async function runReport(){
+  const pkgs = [...document.querySelectorAll('#pkgChips input:checked')].map(b=>b.value);
+  const start = document.getElementById('rep_start').value;
+  const end = document.getElementById('rep_end').value;
+  const name = document.getElementById('rep_name').value.toLowerCase();
+  const status = document.getElementById('rep_status').value;
+  reportRows = players.filter(p=>{
+    if(pkgs.length && !pkgs.includes(p.packageType)) return false;
+    if(start && (p.date||'') < start) return false;
+    if(end && (p.date||'') > end) return false;
+    if(name && !(p.fullName||'').toLowerCase().includes(name)) return false;
+    if(status && p.status!==status) return false;
+    return true;
+  });
+  document.getElementById('reportResultCard').style.display='block';
+  document.getElementById('reportCount').textContent = reportRows.length + ' kayıt';
+  document.getElementById('reportTbody').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--dim);"><span class="spin"></span> O günün TCMB kurları getiriliyor...</td></tr>`;
+
+  // Sadece o gün TL fiyatı girilmiş kayıtların tarihleri için kur getir — TL'si olmayan günlerde kur sorgulamaya gerek yok.
+  const uniqueDates = [...new Set(reportRows.filter(p=>p.priceTRY>0).map(p=>p.date).filter(Boolean))];
+  const rateByDate = {};
+  const fetchPromise = mapLimit(uniqueDates, 3, d => getEurBuyForDate(d).then(r => [d, r]).catch(()=>[d, null]));
+  const timedOut = Symbol('timeout');
+  const results = await Promise.race([
+    fetchPromise,
+    new Promise(resolve => setTimeout(()=>resolve(timedOut), 23000))
+  ]);
+  let usedTimeout = false;
+  if(results === timedOut){
+    usedTimeout = true;
+    // Zaman aşımına uğradık: o ana kadar önbelleğe (rateCache) düşmüş olanları kullan, kalanı '-' bırak.
+    // Arka planda fetchPromise çalışmaya devam ediyor; tamamlananlar bir sonraki rapor denemesinde hazır olacak.
+    uniqueDates.forEach(d=>{
+      if(rateCache[d]){
+        const eur = rateCache[d].find(x=>x.code==='EUR');
+        rateByDate[d] = eur ? {buy: eur.buy, usedDate: d, isFallback: false} : null;
+      } else {
+        rateByDate[d] = null;
+      }
+    });
+  } else {
+    results.forEach(([d, r]) => { rateByDate[d] = r; });
+  }
+
+  const stMap = {done:'Yapıldı', notdone:'Yapılmadı', pending:'Beklemede', cancelled:'İptal Oldu'};
+  document.getElementById('reportTbody').innerHTML = reportRows.map(p=>{
+    const rateInfo = p.date ? rateByDate[p.date] : null;
+    const eurRateTxt = rateInfo ? rateInfo.buy.toFixed(4) + (rateInfo.isFallback?' *':'') : '-';
+    const convertedEur = (rateInfo && p.priceTRY) ? (p.priceTRY / rateInfo.buy) : null;
+    return `<tr><td>${escapeHtml(p.fullName)}</td><td>${p.date||''}</td><td>${escapeHtml(p.packageType||'')}</td>
+    <td>${escapeHtml(p.coachName||'-')}</td><td>€${(p.priceEUR||0).toFixed(2)}</td><td>₺${(p.priceTRY||0).toFixed(2)}</td>
+    <td>${eurRateTxt}</td><td>${convertedEur!==null ? '€'+convertedEur.toFixed(2) : '-'}</td>
+    <td>${stMap[p.status]||''}</td></tr>`;
+  }).join('')
+  + (Object.values(rateByDate).some(r=>r&&r.isFallback) ? `<tr><td colspan="9" style="font-size:11px;color:var(--dim2);">* O gün kur yayınlanmadığı için en yakın önceki iş gününün kuru kullanıldı.</td></tr>` : '')
+  + (usedTimeout ? `<tr><td colspan="9" style="font-size:11px;color:var(--accent);">⚠️ Bazı kurlar zaman aşımına uğradı (o günün kuru "-" gösteriliyor). Arka planda getirilmeye devam ediyor — Rapor Oluştur'a birkaç saniye sonra tekrar basarsanız önbellekten anında gelir.</td></tr>` : '');
+  window.lastReportRateByDate = rateByDate;
+}
+function exportExcel(){
+  const rbd = window.lastReportRateByDate || {};
+  const rows = reportRows.map(p=>{
+    const r = p.date ? rbd[p.date] : null;
+    return {
+      'Ad Soyad':p.fullName, 'Tarih':p.date, 'Paket':p.packageType, 'Antrenör':p.coachName,
+      'EUR':p.priceEUR, 'TRY':p.priceTRY,
+      'Günün EUR Alış Kuru': r ? r.buy : '',
+      'TRY -> EUR (o günkü kur)': (r && p.priceTRY) ? +(p.priceTRY / r.buy).toFixed(2) : '',
+      'Durum':p.status, 'Telefon':(p.countryCode||'')+p.phone, 'Not':p.note
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Rapor');
+  XLSX.writeFile(wb, 'mta-rapor-'+Date.now()+'.xlsx');
+}
+function exportWord(){
+  const rbd = window.lastReportRateByDate || {};
+  let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">';
+  html += '<head><meta charset="utf-8"><title>Rapor</title></head><body>';
+  html += '<h2>'+escapeHtml(settings.academyName||'MTA Akademi')+' - Rapor</h2><table border="1" cellspacing="0" cellpadding="4">';
+  html += '<tr><th>Ad Soyad</th><th>Tarih</th><th>Paket</th><th>Antrenör</th><th>EUR</th><th>TRY</th><th>Günün EUR Alış Kuru</th><th>TRY -&gt; EUR</th><th>Durum</th></tr>';
+  reportRows.forEach(p=>{
+    const r = p.date ? rbd[p.date] : null;
+    const conv = (r && p.priceTRY) ? (p.priceTRY / r.buy).toFixed(2) : '-';
+    html += `<tr><td>${escapeHtml(p.fullName)}</td><td>${p.date||''}</td><td>${escapeHtml(p.packageType||'')}</td><td>${escapeHtml(p.coachName||'-')}</td><td>${(p.priceEUR||0).toFixed(2)}</td><td>${(p.priceTRY||0).toFixed(2)}</td><td>${r?r.buy.toFixed(4):'-'}</td><td>${conv}</td><td>${p.status||''}</td></tr>`;
+  });
+  html += '</table></body></html>';
+  const blob = new Blob(['\ufeff', html], {type:'application/msword'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'mta-rapor-'+Date.now()+'.doc';
+  link.click();
+}
+function exportPDF(){
+  const area = document.getElementById('printArea');
+  const rbd = window.lastReportRateByDate || {};
+  let rowsHtml = reportRows.map(p=>{
+    const r = p.date ? rbd[p.date] : null;
+    const conv = (r && p.priceTRY) ? '€'+(p.priceTRY / r.buy).toFixed(2) : '-';
+    return `<tr><td>${escapeHtml(p.fullName)}</td><td>${p.date||''}</td><td>${escapeHtml(p.packageType||'')}</td><td>${escapeHtml(p.coachName||'-')}</td><td>€${(p.priceEUR||0).toFixed(2)}</td><td>₺${(p.priceTRY||0).toFixed(2)}</td><td>${r?r.buy.toFixed(4):'-'}</td><td>${conv}</td><td>${p.status||''}</td></tr>`;
+  }).join('');
+  area.innerHTML = `<div style="font-family:Arial;padding:30px;">
+    <h2>${escapeHtml(settings.academyName||'MTA Akademi')} - Rapor</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;" border="1" cellpadding="6">
+      <tr><th>Ad Soyad</th><th>Tarih</th><th>Paket</th><th>Antrenör</th><th>EUR</th><th>TRY</th><th>Günün EUR Kuru</th><th>TRY→EUR</th><th>Durum</th></tr>
+      ${rowsHtml}
+    </table></div>`;
+  setTimeout(()=>window.print(), 200);
+}
+
+/* ================= DÖVİZ KURLARI ================= */
+/* Artık TCMB'ye önce kendi Netlify Function'ımız (/netlify/functions/tcmb-rate.js) üzerinden
+   erişiyoruz — bu sunucudan sunucuya bir istek olduğu için CORS diye bir sorun yaşanmaz ve
+   üçüncü parti proxy servislerine bağımlı kalınmaz. Function bir sebeple erişilemezse (ör. henüz
+   deploy edilmediyse) eski üçüncü parti proxy'ler yedek olarak devreye girer. */
+const CORS_PROXIES = [
+  // Kendi sunucumuz (birincil, en güvenilir yol):
+  url => {
+    const dateMatch = url.match(/\/kurlar\/(\d{4})(\d{2})\/(\d{2})(\d{2})\d{4}\.xml$/);
+    if(dateMatch){
+      const [, yyyy, mm, dd] = dateMatch;
+      return `/.netlify/functions/tcmb-rate?date=${yyyy}-${mm}-${dd}`;
+    }
+    return '/.netlify/functions/tcmb-rate';
+  },
+  // Yedek (üçüncü parti) proxy'ler — sadece kendi fonksiyonumuz çalışmazsa devreye girer:
+  url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
+  url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url) + '&t=' + Date.now(),
+  url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
+  url => 'https://cors.x2u.in/' + url
+];
+// Aynı anda çok fazla istek gönderirsek ücretsiz CORS proxy'leri hepsini reddedebiliyor;
+// bu yüzden istekleri küçük gruplar halinde (aynı anda en fazla 3 tane) yapıyoruz.
+async function mapLimit(items, limit, fn){
+  const results = new Array(items.length);
+  let i = 0;
+  async function worker(){
+    while(i < items.length){
+      const idx = i++;
+      results[idx] = await fn(items[idx], idx);
+    }
+  }
+  await Promise.all(Array.from({length: Math.min(limit, items.length)}, worker));
+  return results;
+}
+async function fetchWithTimeout(rawUrl, ms){
+  ms = ms || 4000;
+  let lastErr = null;
+  // Her proxy'yi tek seferde deniyoruz (tekrar denemek yerine çeşitliliğe güveniyoruz) —
+  // böylece 5 proxy toplamda ~20sn içinde tükenir ve rapor zaman aşımını beklemeden sonuç döner.
+  for(const buildProxyUrl of CORS_PROXIES){
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), ms);
+    try{
+      const res = await fetch(buildProxyUrl(rawUrl), {signal: controller.signal, cache:'no-store'});
+      clearTimeout(timer);
+      if(res.ok){
+        const text = await res.text();
+        if(text && text.trim().length > 20){
+          return {ok:true, text: async()=>text};
+        }
+        lastErr = new Error('Boş yanıt');
+        console.warn('[TCMB proxy] boş yanıt:', buildProxyUrl(rawUrl));
+      } else {
+        lastErr = new Error('HTTP '+res.status);
+        console.warn('[TCMB proxy]', buildProxyUrl(rawUrl), '->', res.status);
+      }
+    }catch(e){
+      clearTimeout(timer);
+      lastErr = e;
+      console.warn('[TCMB proxy erişilemedi]', buildProxyUrl(rawUrl), '-', e.message||e);
+    }
+  }
+  console.error('[TCMB] Tüm proxy denemeleri başarısız oldu. rawUrl:', rawUrl);
+  throw lastErr || new Error('fetch failed');
+}
+// Aynı anda çok fazla istek atıp proxy servislerini limitlemeyelim diye en fazla N tanesini
+// paralel çalıştıran basit bir kuyruk.
+async function runWithConcurrencyLimit(items, limit, worker){
+  const results = new Array(items.length);
+  let idx = 0;
+  async function next(){
+    while(idx < items.length){
+      const myIdx = idx++;
+      results[myIdx] = await worker(items[myIdx], myIdx);
+    }
+  }
+  const runners = Array.from({length: Math.min(limit, items.length)}, ()=>next());
+  await Promise.all(runners);
+  return results;
+}
+async function fetchRates(manual){
+  try{
+    const res = await fetchWithTimeout('https://www.tcmb.gov.tr/kurlar/today.xml');
+    const text = await res.text();
+    const xml = new DOMParser().parseFromString(text, 'text/xml');
+    const nodes = [...xml.getElementsByTagName('Currency')];
+    const rates = nodes.map(n=>({
+      code: n.getAttribute('Kod'),
+      name: n.getElementsByTagName('Isim')[0]?.textContent || n.getAttribute('Kod'),
+      buy: parseFloat(n.getElementsByTagName('ForexBuying')[0]?.textContent) || 0,
+      sell: parseFloat(n.getElementsByTagName('ForexSelling')[0]?.textContent) || 0,
+      effBuy: parseFloat(n.getElementsByTagName('BanknoteBuying')[0]?.textContent) || 0,
+      effSell: parseFloat(n.getElementsByTagName('BanknoteSelling')[0]?.textContent) || 0
+    })).filter(r=>r.sell>0);
+    ratesData = {rates, date: new Date().toLocaleDateString('tr-TR'), isoDate: new Date().toISOString().slice(0,10), fetchedAt: Date.now()};
+    db.collection('settings').doc('rates').set(ratesData).catch(()=>{});
+    db.collection('exchangeRates').doc(ratesData.isoDate).set({date:ratesData.isoDate, rates, fetchedAt: Date.now()}).catch(()=>{});
+    rateCache[ratesData.isoDate] = rates;
+    renderRates();
+    if(manual) showToast('Kurlar güncellendi ✅');
+  }catch(e){
+    // fallback: try cached rates from Firestore
+    const cached = await db.collection('settings').doc('rates').get();
+    if(cached.exists){ ratesData = cached.data(); renderRates(); }
+    if(manual) showToast('Canlı kur alınamadı, önbellek gösteriliyor.');
+  }
+}
+/* ---- Geçmiş kur sorgulama / rapor için tarihe göre kur motoru ---- */
+function parseTcmbXml(text){
+  const xml = new DOMParser().parseFromString(text, 'text/xml');
+  const nodes = [...xml.getElementsByTagName('Currency')];
+  return nodes.map(n=>({
+    code: n.getAttribute('Kod'),
+    name: n.getElementsByTagName('Isim')[0]?.textContent || n.getAttribute('Kod'),
+    buy: parseFloat(n.getElementsByTagName('ForexBuying')[0]?.textContent) || 0,
+    sell: parseFloat(n.getElementsByTagName('ForexSelling')[0]?.textContent) || 0,
+    effBuy: parseFloat(n.getElementsByTagName('BanknoteBuying')[0]?.textContent) || 0,
+    effSell: parseFloat(n.getElementsByTagName('BanknoteSelling')[0]?.textContent) || 0
+  })).filter(r=>r.sell>0);
+}
+// Belirli bir tarihin (yyyy-mm-dd) kurlarını getirir: önce hafızadan, sonra Firestore önbelleğinden,
+// sonra TCMB'den (o günün arşivinden) çeker. Hafta sonu/tatil gibi kur olmayan günlerde en yakın
+// önceki iş gününün kurunu döndürür. Sonuç: {rates:[...], usedDate:'yyyy-mm-dd', isFallback:bool} ya da null.
+async function getRatesForDate(dateStr, depth){
+  depth = depth || 0;
+  if(!dateStr || depth > 3) return null;
+  if(rateCache[dateStr]) return {rates: rateCache[dateStr], usedDate: dateStr, isFallback: depth>0};
+  // Hafta sonuysa (Cumartesi/Pazar) doğrudan bir önceki Cuma'ya atla, gereksiz istek yapma
+  const dow = new Date(dateStr+'T00:00:00').getDay(); // 0=Pazar, 6=Cumartesi
+  if(dow===0 || dow===6){
+    const back = dow===0 ? 2 : 1;
+    const prev = new Date(dateStr+'T00:00:00'); prev.setDate(prev.getDate()-back);
+    return getRatesForDate(prev.toISOString().slice(0,10), depth+1);
+  }
+  try{
+    const doc = await db.collection('exchangeRates').doc(dateStr).get();
+    if(doc.exists && doc.data().rates && doc.data().rates.length){
+      rateCache[dateStr] = doc.data().rates;
+      return {rates: doc.data().rates, usedDate: dateStr, isFallback: depth>0};
+    }
+  }catch(e){}
+  try{
+    const d = new Date(dateStr+'T00:00:00');
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yyyy = d.getFullYear();
+    const url = `https://www.tcmb.gov.tr/kurlar/${yyyy}${mm}/${dd}${mm}${yyyy}.xml`;
+    const res = await fetchWithTimeout(url, 6000);
+    const text = await res.text();
+    const rates = parseTcmbXml(text);
+    if(rates.length){
+      rateCache[dateStr] = rates;
+      db.collection('exchangeRates').doc(dateStr).set({date:dateStr, rates, fetchedAt: Date.now()}).catch(()=>{});
+      return {rates, usedDate: dateStr, isFallback: depth>0};
+    }
+  }catch(e){}
+  // Kur yoksa (resmi tatil vb.) bir önceki güne bak
+  const prev = new Date(dateStr+'T00:00:00');
+  prev.setDate(prev.getDate()-1);
+  return getRatesForDate(prev.toISOString().slice(0,10), depth+1);
+}
+async function getEurBuyForDate(dateStr){
+  const r = await getRatesForDate(dateStr);
+  if(!r) return null;
+  const eur = r.rates.find(x=>x.code==='EUR');
+  return eur ? {buy: eur.buy, usedDate: r.usedDate, isFallback: r.isFallback} : null;
+}
+async function queryDateRate(){
+  const dateStr = document.getElementById('hist_date').value;
+  if(!dateStr){ showToast('Lütfen bir tarih seçin.'); return; }
+  document.getElementById('histResult').innerHTML = '<div style="padding:14px;color:var(--dim);"><span class="spin"></span> Sorgulanıyor...</div>';
+  const timedOut = Symbol('timeout');
+  const r = await Promise.race([
+    getRatesForDate(dateStr),
+    new Promise(resolve => setTimeout(()=>resolve(timedOut), 15000))
+  ]);
+  if(r === timedOut){ document.getElementById('histResult').innerHTML = '<div class="emptyState">Sorgu 15 saniyede tamamlanamadı, lütfen tekrar deneyin.</div>'; return; }
+  if(!r){ document.getElementById('histResult').innerHTML = '<div class="emptyState">Bu tarih için kur bulunamadı.</div>'; return; }
+  const note = r.isFallback ? `<div style="font-size:11.5px;color:var(--dim2);margin-bottom:8px;">Not: ${escapeHtml(dateStr)} tarihinde kur yayınlanmamış (hafta sonu/tatil olabilir), en yakın iş günü olan <b>${escapeHtml(r.usedDate)}</b> kuru gösteriliyor.</div>` : '';
+  document.getElementById('histResult').innerHTML = note + `
+    <table class="rateTable"><thead><tr><th>Döviz</th><th>Alış</th><th>Satış</th><th>Efektif Alış</th><th>Efektif Satış</th></tr></thead>
+    <tbody>${r.rates.map(x=>`<tr><td>${x.code}</td><td>${x.buy.toFixed(4)}</td><td>${x.sell.toFixed(4)}</td><td>${x.effBuy.toFixed(4)}</td><td>${x.effSell.toFixed(4)}</td></tr>`).join('')}</tbody></table>`;
+}
+async function queryRangeRates(days){
+  document.getElementById('histResult').innerHTML = '<div style="padding:14px;color:var(--dim);"><span class="spin"></span> '+days+' günlük kurlar getiriliyor, lütfen bekleyin...</div>';
+  const today = new Date();
+  const dateList = [];
+  for(let i=0;i<days;i++){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    dateList.push(d.toISOString().slice(0,10));
+  }
+  const timedOut = Symbol('timeout');
+  const results = await Promise.race([
+    mapLimit(dateList, 3, dateStr => getRatesForDate(dateStr).then(r=>({dateStr, r})).catch(()=>({dateStr, r:null}))),
+    new Promise(resolve => setTimeout(()=>resolve(timedOut), 25000))
+  ]);
+  const rows = (results === timedOut ? [] : results).filter(x=>x.r).map(({dateStr, r})=>{
+    const eur = r.rates.find(x=>x.code==='EUR');
+    const usd = r.rates.find(x=>x.code==='USD');
+    return {dateStr, usedDate:r.usedDate, eur: eur?eur.buy:null, usd: usd?usd.buy:null};
+  });
+  if(!rows.length){ document.getElementById('histResult').innerHTML = '<div class="emptyState">Kur bulunamadı. İnternet bağlantınızı kontrol edin veya birkaç saniye sonra tekrar deneyin.</div>'; return; }
+  document.getElementById('histResult').innerHTML = `
+    <table class="rateTable"><thead><tr><th>Tarih</th><th>EUR Alış</th><th>USD Alış</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${r.dateStr}${r.usedDate!==r.dateStr?' <span style="color:var(--dim2);font-size:11px;">('+r.usedDate+' kuru)</span>':''}</td><td>${r.eur?r.eur.toFixed(4):'-'}</td><td>${r.usd?r.usd.toFixed(4):'-'}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderRates(){
+  if(!ratesData) return;
+  document.getElementById('rateDate').textContent = ratesData.date;
+  const head = ['USD','EUR','GBP'];
+  document.getElementById('rateHeadCards').innerHTML =
+    `<div class="rateHeadCard"><div class="pair">EUR/USD</div><div class="val">${eurUsd()}</div></div>` +
+    head.map(c=>{
+      const r = ratesData.rates.find(x=>x.code===c);
+      return `<div class="rateHeadCard"><div class="pair">${c}/TRY</div><div class="val">${r?r.sell.toFixed(4):'-'}</div></div>`;
+    }).join('');
+  document.getElementById('rateTbody').innerHTML = ratesData.rates.map(r=>`
+    <tr><td>${r.code} <span style="color:var(--dim2);">${escapeHtml(r.name)}</span></td><td>${r.buy.toFixed(4)}</td><td>${r.sell.toFixed(4)}</td><td>${r.effBuy.toFixed(4)}</td><td>${r.effSell.toFixed(4)}</td></tr>
+  `).join('');
+  const codes = ['TRY', ...ratesData.rates.map(r=>r.code)];
+  ['conv_from','conv_to'].forEach(id=>{
+    const sel = document.getElementById(id);
+    sel.innerHTML = codes.map(c=>`<option value="${c}">${c}</option>`).join('');
+  });
+  document.getElementById('conv_from').value='EUR';
+  document.getElementById('conv_to').value='TRY';
+  doConvert();
+}
+function eurUsd(){
+  if(!ratesData) return '-';
+  const eur = ratesData.rates.find(r=>r.code==='EUR');
+  const usd = ratesData.rates.find(r=>r.code==='USD');
+  if(!eur||!usd) return '-';
+  return (eur.sell/usd.sell).toFixed(4);
+}
+function rateToTRY(code){
+  if(code==='TRY') return 1;
+  const r = ratesData.rates.find(x=>x.code===code);
+  return r ? r.sell : 0;
+}
+function doConvert(){
+  if(!ratesData) return;
+  const amount = parseFloat(document.getElementById('conv_amount').value) || 0;
+  const from = document.getElementById('conv_from').value;
+  const to = document.getElementById('conv_to').value;
+  const inTRY = amount * rateToTRY(from);
+  const result = to==='TRY' ? inTRY : inTRY / rateToTRY(to);
+  document.getElementById('conv_result').textContent = result.toFixed(2) + ' ' + to;
+}
+setInterval(()=>fetchRates(false), 1000*60*60*6); // her 6 saatte bir otomatik güncelle
+
+/* ================= AYARLAR ================= */
+function applySettingsToUI(){
+  document.getElementById('academyNameTop').textContent = settings.academyName || 'MTA Akademi';
+  document.getElementById('guestFormLink').textContent = GUEST_FORM_URL;
+  document.getElementById('staffInviteLink').textContent = GUEST_FORM_URL.replace(/\/$/,'') + '/staff-signup.html';
+  if(settings.logoUrl) document.getElementById('logoPreview').src = settings.logoUrl;
+  if(settings.formBgUrl){ document.getElementById('tabletBgPreview').src = settings.formBgUrl; document.getElementById('tabletPreviewBox').style.backgroundImage = `url(${settings.formBgUrl})`; }
+  document.getElementById('tabletPreviewBox').style.backgroundColor = settings.formBgColor || '#35f127';
+  document.getElementById('tabletPreviewBox').style.color = settings.formTextColor || '#f4ecec';
+  document.getElementById('formBgColor').value = settings.formBgColor || '#35f127';
+  document.getElementById('formBgColorHex').value = settings.formBgColor || '#35f127';
+  document.getElementById('formTextColor').value = settings.formTextColor || '#f4ecec';
+  document.getElementById('formTextColorHex').value = settings.formTextColor || '#f4ecec';
+  if(settings.a4LogoUrl) document.getElementById('a4LogoPreview').src = settings.a4LogoUrl;
+  if(settings.a4BgUrl) document.getElementById('a4BgPreview').src = settings.a4BgUrl;
+  document.getElementById('a4BgColor').value = settings.a4BgColor || '#f7e9e9';
+  document.getElementById('a4BgColorHex').value = settings.a4BgColor || '#f7e9e9';
+  document.getElementById('a4TextColor').value = settings.a4TextColor || '#1a1a2e';
+  document.getElementById('a4TextColorHex').value = settings.a4TextColor || '#1a1a2e';
+  document.getElementById('a4AccentColor').value = settings.a4AccentColor || '#2d7a5f';
+  document.getElementById('a4AccentColorHex').value = settings.a4AccentColor || '#2d7a5f';
+  document.getElementById('g_academyName').value = settings.academyName || 'Megasaray Tennis Academy';
+  document.getElementById('g_subtitle').value = settings.subtitle || 'Player Package Form System';
+  document.getElementById('g_address').value = settings.address || '';
+  document.getElementById('g_phone').value = settings.phone || '';
+  document.getElementById('g_email').value = settings.email || '';
+  const wa = settings.waTemplates || {};
+  document.getElementById('wa_tr').value = wa.tr || document.getElementById('wa_tr').value;
+  document.getElementById('wa_en').value = wa.en || document.getElementById('wa_en').value;
+  document.getElementById('wa_de').value = wa.de || document.getElementById('wa_de').value;
+  document.getElementById('wa_ru').value = wa.ru || document.getElementById('wa_ru').value;
+}
+function syncColor(colorId, hexId){ document.getElementById(colorId).value = document.getElementById(hexId).value; }
+function uploadImage(input, field, previewId){
+  const file = input.files[0]; if(!file) return;
+  if(file.size > 900*1024){ showToast('Görsel çok büyük (maks ~900KB). Lütfen küçültün.'); return; }
+  const reader = new FileReader();
+  reader.onload = async e=>{
+    document.getElementById(previewId).src = e.target.result;
+    await db.collection('settings').doc('general').set({[field]: e.target.result}, {merge:true});
+    showToast('Görsel yüklendi ✅');
+  };
+  reader.readAsDataURL(file);
+}
+async function clearSetting(field, previewId){
+  await db.collection('settings').doc('general').set({[field]: firebase.firestore.FieldValue.delete()}, {merge:true});
+  document.getElementById(previewId).src = '';
+  showToast('Kaldırıldı.');
+}
+async function saveTabletSettings(){
+  await db.collection('settings').doc('general').set({
+    formBgColor: document.getElementById('formBgColor').value,
+    formTextColor: document.getElementById('formTextColor').value
+  }, {merge:true});
+  document.getElementById('tabletPreviewBox').style.backgroundColor = document.getElementById('formBgColor').value;
+  document.getElementById('tabletPreviewBox').style.color = document.getElementById('formTextColor').value;
+  showToast('Renkler kaydedildi ✅');
+}
+async function saveA4Settings(){
+  await db.collection('settings').doc('general').set({
+    a4BgColor: document.getElementById('a4BgColor').value,
+    a4TextColor: document.getElementById('a4TextColor').value,
+    a4AccentColor: document.getElementById('a4AccentColor').value
+  }, {merge:true});
+  showToast('A4 renkleri kaydedildi ✅');
+}
+async function saveGeneralSettings(){
+  await db.collection('settings').doc('general').set({
+    academyName: document.getElementById('g_academyName').value,
+    subtitle: document.getElementById('g_subtitle').value,
+    address: document.getElementById('g_address').value,
+    phone: document.getElementById('g_phone').value,
+    email: document.getElementById('g_email').value
+  }, {merge:true});
+  showToast('Genel ayarlar kaydedildi ✅');
+}
+async function saveWaTemplates(){
+  await db.collection('settings').doc('general').set({
+    waTemplates: {
+      tr: document.getElementById('wa_tr').value,
+      en: document.getElementById('wa_en').value,
+      de: document.getElementById('wa_de').value,
+      ru: document.getElementById('wa_ru').value
+    }
+  }, {merge:true});
+  showToast('WhatsApp şablonları kaydedildi ✅');
+}
+function pickTheme(name){
+  document.querySelectorAll('.themeOpt').forEach(o=>o.classList.toggle('active', o.dataset.theme===name));
+  const themes = {
+    gold:{a:'#ff9d2f',a2:'#ff6a1f'}, navy:{a:'#4da3ff',a2:'#2a6fd6'}, green:{a:'#3ecf8e',a2:'#1fa870'},
+    red:{a:'#ff5c5c',a2:'#d63b3b'}, orange:{a:'#ffb020',a2:'#ff7a00'}, grey:{a:'#d0a030',a2:'#a8801f'}
+  };
+  const t = themes[name]; if(!t) return;
+  document.documentElement.style.setProperty('--accent', t.a);
+  document.documentElement.style.setProperty('--accent2', t.a2);
+  document.documentElement.style.setProperty('--accent-grad', `linear-gradient(135deg,${t.a},${t.a2})`);
+  db.collection('settings').doc('general').set({theme:name}, {merge:true});
+  showToast('Tema uygulandı ✅');
+}
+function sendFormWhatsapp(){
+  const msg = `Merhaba, lütfen bu link üzerinden kayıt formunu doldurun: ${GUEST_FORM_URL}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+/* ---------------- PERSONEL YÖNETİMİ ---------------- */
+function renderStaff(){
+  const admins = staffList.filter(s=>s.role==='admin').length;
+  document.getElementById('staffCountLine').textContent = `Toplam: ${staffList.length} · Admin: ${admins} · Personel: ${staffList.length-admins}`;
+  document.getElementById('staffList').innerHTML = staffList.map(s=>`
+    <div class="staffRow">
+      <div class="staffMeta">
+        <div class="staffAvatar">${(s.name||s.email||'?')[0].toUpperCase()}</div>
+        <div><div style="font-weight:700;">${escapeHtml(s.name||'-')}</div><div style="font-size:12px;color:var(--dim);">${escapeHtml(s.email||'')}</div></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select onchange="setStaffRole('${s.id}', this.value)">
+          <option value="personel" ${s.role!=='admin'?'selected':''}>Personel</option>
+          <option value="admin" ${s.role==='admin'?'selected':''}>Admin</option>
+        </select>
+        <button class="btn btn-danger" style="padding:6px 10px;" onclick="removeStaff('${s.id}','${escapeAttr(s.name||s.email)}')">Sil</button>
+      </div>
+    </div>`).join('');
+}
+async function setStaffRole(id, role){ await db.collection('staff').doc(id).update({role}); showToast('Rol güncellendi.'); }
+async function removeStaff(id, name){
+  if(id === currentUser.uid){ showToast('Kendi hesabınızı silemezsiniz.'); return; }
+  if(!confirm(`"${name}" personelinin erişimini kaldırmak istiyor musunuz?`)) return;
+  await db.collection('staff').doc(id).update({active:false});
+  showToast('Personel erişimi kaldırıldı. (Not: Auth hesabını tamamen silmek için Firebase Console kullanın.)');
+}
+
+/* ---------------- UTIL ---------------- */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display='block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.style.display='none', 3000);
+}
+function copyText(id){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>showToast('Kopyalandı ✅'));
+}
+function escapeHtml(str){ return (str==null?'':String(str)).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeAttr(str){ return escapeHtml(str); }
+
+// default date on load
+document.getElementById('f_date') && (document.getElementById('f_date').value = new Date().toISOString().slice(0,10));
+</script>
+</body>
+</html>
